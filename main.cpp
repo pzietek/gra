@@ -6,8 +6,7 @@
 
 using namespace std;
 
-void cls()
-{
+void cls() {
     system("cls||clear");
     return;
 }
@@ -94,6 +93,7 @@ public:
     bool pole_istnieje(Pozycja poz) const;
     bool tu_juz_bylo_strzelane(Pozycja poz) const;
     vector<shared_ptr<Statek>> moje_statki() const;
+    bool tu_moze_stac_statek(shared_ptr<Statek> statek, Kierunek kierunek, Pozycja poz) const;
     void ustaw_statek(shared_ptr<Statek> statek, Kierunek kierunek, Pozycja poz);
 };
 
@@ -127,6 +127,7 @@ public:
     void pokaz(Gracz g) const;
     void takie_pole_nie_istnieje() const;
     void tu_juz_strzelales() const;
+    void tu_nie_moze_stac_statek() const;
 };
 
 class Gra {
@@ -144,8 +145,8 @@ public:
 Statek::Statek(int rozm, string nazw)
     : rozmiar(rozm)
     , zycie(rozm)
-    , nazwa(nazw)
-    {}
+    , nazwa(nazw) {
+}
 
 void Statek::trafiony() {
     zycie--;
@@ -175,8 +176,8 @@ Wynik_strzalu Statek::stan_statku() const {
 /////////////////////POLE WODY///////////////////////////////////////////////////////////////
 
 Pole_wody::Pole_wody(): bylo_strzelane(false) {}
-    char Pole_wody::symbol() const  {
-        return symbol_wody(bylo_strzelane);
+char Pole_wody::symbol() const  {
+    return symbol_wody(bylo_strzelane);
 }
 
 Wynik_strzalu Pole_wody::wynik_strzalu() {
@@ -191,17 +192,17 @@ string Pole_wody::opis() const {
 ///////////////////POLE STATKU///////////////////////////////////////////////////////////////
 
 Pole_statku::Pole_statku(shared_ptr<Statek> statek_)
-    : statek(statek_)
-    {}
+    : statek(statek_) {
+}
 
 char Pole_statku::symbol() const {
     switch(statek->stan_statku()) {
-        case NIETRAFIONY:
-            return symbol_statku(NIETRAFIONY);
-        case TRAFIONY:
-            return symbol_statku(TRAFIONY);
-        case ZATOPIONY:
-            return symbol_statku(ZATOPIONY);
+    case NIETRAFIONY:
+        return symbol_statku(NIETRAFIONY);
+    case TRAFIONY:
+        return symbol_statku(TRAFIONY);
+    case ZATOPIONY:
+        return symbol_statku(ZATOPIONY);
     }
 }
 
@@ -218,21 +219,20 @@ string Pole_statku::opis() const {
 
 Plansza::Plansza()
     : plansza(10, vector<shared_ptr<Pole>>(10))
-    , strzaly(10, vector<char>(10,' '))
-    {
-        for(int i=0; i<10; i++) {
-            for(int j=0; j<10; j++) {
-                plansza[i][j] = make_shared<Pole_wody>();
-            }
+    , strzaly(10, vector<char>(10,' ')) {
+    for(int i=0; i<10; i++) {
+        for(int j=0; j<10; j++) {
+            plansza[i][j] = make_shared<Pole_wody>();
         }
+    }
 
 //        for(int i=0; i<4; i++)
 //            statki.push_back(make_shared<Statek>(1, "Jednomasztowiec"));
 //        for(int i=0; i<3; i++)
 //            statki.push_back(make_shared<Statek>(2, "Dwumasztowiec"));
-        for(int i=0; i<2; i++)
-            statki.push_back(make_shared<Statek>(3, "Trzymasztowiec"));
-        statki.push_back(make_shared<Statek>(4, "Czteromasztowiec"));
+    for(int i=0; i<2; i++)
+        statki.push_back(make_shared<Statek>(3, "Trzymasztowiec"));
+    statki.push_back(make_shared<Statek>(4, "Czteromasztowiec"));
 }
 
 void Plansza::czysc() {
@@ -269,6 +269,23 @@ vector<shared_ptr<Statek>> Plansza::moje_statki() const {
     return statki;
 }
 
+bool Plansza::tu_moze_stac_statek(shared_ptr<Statek> statek, Kierunek kierunek, Pozycja poz) const {
+    if (!pole_istnieje(poz))
+        return false;
+    if(kierunek == POZIOMO) {
+        for(int i=0; i<statek->rozm(); i++) {
+            if (plansza[poz.first][poz.second+i]->opis() == "Statek")
+                return false;
+        }
+    } else {
+        for(int i=0; i<statek->rozm(); i++) {
+            if (plansza[poz.first+i][poz.second]->opis() == "Statek")
+                return false;
+        }
+    }
+    return true;
+}
+
 void Plansza::ustaw_statek(shared_ptr<Statek> statek, Kierunek kierunek, Pozycja poz) {
     if(kierunek == POZIOMO) {
         for(int i=0; i<statek->rozm(); i++) {
@@ -285,15 +302,27 @@ void Plansza::ustaw_statek(shared_ptr<Statek> statek, Kierunek kierunek, Pozycja
 
 Gracz::Gracz(int numer, UI &ui_)
     : plansza(Plansza())
-    , num(numer), ui(ui_)
-    {}
+    , num(numer), ui(ui_) {
+}
 
 void Gracz::ustaw_flote() {
     plansza.czysc();
     ui.pokaz(*this);
+    Kierunek kierunek;
+    Pozycja poz;
     for(shared_ptr<Statek> statek : plansza.moje_statki()) {
         ui.poczatek_ustawiania(statek);
-        plansza.ustaw_statek(statek, ui.zapytaj_o_kierunek(), ui.zapytaj_o_poczatek_statku());
+        poz = ui.zapytaj_o_poczatek_statku();
+        kierunek = ui.zapytaj_o_kierunek();
+        while (!plansza.tu_moze_stac_statek(statek, kierunek, poz)) {
+            ui.tu_nie_moze_stac_statek();
+            ui.wcisnij_enter();
+            ui.pokaz(*this);
+            ui.poczatek_ustawiania(statek);
+            poz = ui.zapytaj_o_poczatek_statku();
+            kierunek = ui.zapytaj_o_kierunek();
+        }
+        plansza.ustaw_statek(statek, kierunek, poz);
         ui.pokaz(*this);
     }
     ui.koniec_ustawiania();
@@ -336,11 +365,9 @@ bool Gracz::strzal(Gracz g) {
     ui.wcisnij_enter();
     if (wynik == TRAFIONY) {
         return true;
-    }
-    else if (wynik == ZATOPIONY) {
+    } else if (wynik == ZATOPIONY) {
         return true;
-    }
-    else return false;
+    } else return false;
 }
 
 void Gracz::wygral() {
@@ -385,11 +412,9 @@ void UI::koniec_ustawiania() const {
 void UI::wynik_strzalu(Wynik_strzalu wynik) const {
     if (wynik == TRAFIONY) {
         cout << "TRAFIONY!" << endl;
-    }
-    else if (wynik == ZATOPIONY) {
+    } else if (wynik == ZATOPIONY) {
         cout << "ZATOPIONY!" << endl;
-    }
-    else cout << "PUDLO!" << endl;
+    } else cout << "PUDLO!" << endl;
 }
 
 void UI::wcisnij_enter() const {
@@ -432,12 +457,18 @@ void UI::tu_juz_strzelales() const {
     cout << "Tu juz bylo strzelane, sprobuj gdzie indziej!" << endl;
 }
 
+void UI::tu_nie_moze_stac_statek() const {
+    cout << "Tu nie moze stac statek!" << endl;
+}
+
 /////////////GRA///////////////////////////////////////////////////////////////////////
 
 Gra::Gra(UI &ui)
-    : gracze({Gracz(1, ui)
-    , Gracz(2, ui)})
-    {}
+    : gracze( {
+    Gracz(1, ui)
+    , Gracz(2, ui)
+}) {
+}
 
 bool Gra::czy_koniec() const {
     if(gracze[0].zycie() == 0 || gracze[1].zycie() == 0)
