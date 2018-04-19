@@ -57,6 +57,7 @@ class Pole {
 public:
     virtual char symbol() const = 0;
     virtual Wynik_strzalu wynik_strzalu() = 0;
+    virtual string opis() const = 0;
 };
 
 class Pole_wody : public Pole {
@@ -66,6 +67,7 @@ public:
     Pole_wody();
     char symbol() const override;
     Wynik_strzalu wynik_strzalu() override;
+    string opis() const override;
 };
 
 class Pole_statku : public Pole {
@@ -75,6 +77,7 @@ public:
     Pole_statku(shared_ptr<Statek> statek_);
     char symbol() const override;
     Wynik_strzalu wynik_strzalu() override;
+    string opis() const override;
 };
 
 class Plansza {
@@ -181,6 +184,10 @@ Wynik_strzalu Pole_wody::wynik_strzalu() {
     return NIETRAFIONY;
 }
 
+string Pole_wody::opis() const {
+    return "Woda";
+}
+
 ///////////////////POLE STATKU///////////////////////////////////////////////////////////////
 
 Pole_statku::Pole_statku(shared_ptr<Statek> statek_)
@@ -201,6 +208,10 @@ char Pole_statku::symbol() const {
 Wynik_strzalu Pole_statku::wynik_strzalu() {
     statek->trafiony();
     return statek->stan_statku();
+}
+
+string Pole_statku::opis() const {
+    return "Statek";
 }
 
 ///////////////////PLANSZA////////////////////////////////////////////////////////////////////////////
