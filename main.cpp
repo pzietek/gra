@@ -88,6 +88,8 @@ public:
     void dodaj_strzal(Pozycja poz, Wynik_strzalu wynik);
     shared_ptr<Pole> get_pole(Pozycja poz);
     char get_pole_strzalu(Pozycja poz);
+    bool pole_istnieje(Pozycja poz) const;
+    bool tu_juz_bylo_strzelane(Pozycja poz) const;
     vector<shared_ptr<Statek>> moje_statki() const;
     void ustaw_statek(shared_ptr<Statek> statek, Kierunek kierunek, Pozycja poz);
 };
@@ -120,6 +122,8 @@ public:
     void wcisnij_enter() const;
     void podaj_zwyciezce(Gracz g) const;
     void pokaz(Gracz g) const;
+    void takie_pole_nie_istnieje() const;
+    void tu_juz_strzelales() const;
 };
 
 class Gra {
@@ -236,6 +240,20 @@ char Plansza::get_pole_strzalu(Pozycja poz) {
     return strzaly[poz.first][poz.second];
 }
 
+bool Plansza::pole_istnieje(Pozycja poz) const {
+    if(poz.first < 0 || poz.first > 9)
+        return false;
+    if(poz.second < 0 || poz.second > 9)
+        return false;
+    return true;
+}
+
+bool Plansza::tu_juz_bylo_strzelane(Pozycja poz) const {
+    if(strzaly[poz.first][poz.second] == symbol_strzalu(NIETRAFIONY) || strzaly[poz.first][poz.second] == symbol_wody(NIETRAFIONY))
+        return false;
+    return true;
+}
+
 vector<shared_ptr<Statek>> Plansza::moje_statki() const {
     return statki;
 }
@@ -290,8 +308,18 @@ bool Gracz::strzal(Gracz g) {
     bool kolejny_ruch = false;;
     ui.pokaz(*this);
     Pozycja poz = ui.zapytaj_o_strzal();
+    if (!plansza.pole_istnieje(poz)) {
+        ui.takie_pole_nie_istnieje();
+        ui.wcisnij_enter();
+        return true;
+    }
+    if (plansza.tu_juz_bylo_strzelane(poz)) {
+        ui.tu_juz_strzelales();
+        ui.wcisnij_enter();
+        return true;
+    }
     Wynik_strzalu wynik = g.get_plansza().get_pole(poz)->wynik_strzalu();
-    get_plansza().dodaj_strzal(poz, wynik);
+    plansza.dodaj_strzal(poz, wynik);
     ui.pokaz(*this);
     ui.wynik_strzalu(wynik);
     ui.wcisnij_enter();
@@ -383,6 +411,14 @@ void UI::pokaz(Gracz g) const {
         cout << endl << "   +---+---+---+---+---+---+---+---+---+---+" << odstep << "   +---+---+---+---+---+---+---+---+---+---+" << endl;
     }
     cout << endl;
+}
+
+void UI::takie_pole_nie_istnieje() const {
+    cout << "Takie pole nie istnieje, sprobuj ponownie!" << endl;
+}
+
+void UI::tu_juz_strzelales() const {
+    cout << "Tu juz bylo strzelane, sprobuj gdzie indziej!" << endl;
 }
 
 /////////////GRA///////////////////////////////////////////////////////////////////////
