@@ -43,13 +43,15 @@ private :
     string nazwa;
     int rozmiar;
     int zycie;
+    vector<bool> trafienia;
 public:
     Statek(int rozm, string nazw);
-    void trafiony();
+    void trafiony(int n);
     int rozm() const;
     string nazw() const;
     int zycie_statku() const;
     Wynik_strzalu stan_statku() const;
+    bool get_trafienie_w_kawalek_statku(int n) const;
 };
 
 class Pole {
@@ -71,9 +73,10 @@ public:
 
 class Pole_statku : public Pole {
 private:
+    int nr_kawalka_statku;
     shared_ptr<Statek> statek;
 public:
-    Pole_statku(shared_ptr<Statek> statek_);
+    Pole_statku(shared_ptr<Statek> statek_, int num);
     char symbol() const override;
     Wynik_strzalu wynik_strzalu() override;
     string opis() const override;
@@ -145,11 +148,13 @@ public:
 Statek::Statek(int rozm, string nazw)
     : rozmiar(rozm)
     , zycie(rozm)
-    , nazwa(nazw) {
+    , nazwa(nazw)
+    , trafienia(rozmiar, false) {
 }
 
-void Statek::trafiony() {
+void Statek::trafiony(int n) {
     zycie--;
+    trafienia[n] = true;
 }
 
 int Statek::rozm() const {
@@ -162,6 +167,10 @@ string Statek::nazw() const {
 
 int Statek::zycie_statku() const {
     return zycie;
+}
+
+bool Statek::get_trafienie_w_kawalek_statku(int n) const {
+    return trafienia[n];
 }
 
 Wynik_strzalu Statek::stan_statku() const {
@@ -191,8 +200,9 @@ string Pole_wody::opis() const {
 
 ///////////////////POLE STATKU///////////////////////////////////////////////////////////////
 
-Pole_statku::Pole_statku(shared_ptr<Statek> statek_)
-    : statek(statek_) {
+Pole_statku::Pole_statku(shared_ptr<Statek> statek_, int num)
+    : statek(statek_)
+    , nr_kawalka_statku(num) {
 }
 
 char Pole_statku::symbol() const {
@@ -200,14 +210,17 @@ char Pole_statku::symbol() const {
     case NIETRAFIONY:
         return symbol_statku(NIETRAFIONY);
     case TRAFIONY:
-        return symbol_statku(TRAFIONY);
+        if (statek->get_trafienie_w_kawalek_statku(nr_kawalka_statku))
+            return symbol_statku(TRAFIONY);
+        else
+            return symbol_statku(NIETRAFIONY);
     case ZATOPIONY:
         return symbol_statku(ZATOPIONY);
     }
 }
 
 Wynik_strzalu Pole_statku::wynik_strzalu() {
-    statek->trafiony();
+    statek->trafiony(nr_kawalka_statku);
     return statek->stan_statku();
 }
 
@@ -289,11 +302,11 @@ bool Plansza::tu_moze_stac_statek(shared_ptr<Statek> statek, Kierunek kierunek, 
 void Plansza::ustaw_statek(shared_ptr<Statek> statek, Kierunek kierunek, Pozycja poz) {
     if(kierunek == POZIOMO) {
         for(int i=0; i<statek->rozm(); i++) {
-            plansza[poz.first][poz.second+i] = make_shared<Pole_statku>(statek);
+            plansza[poz.first][poz.second+i] = make_shared<Pole_statku>(statek, i);
         }
     } else {
         for(int i=0; i<statek->rozm(); i++) {
-            plansza[poz.first+i][poz.second] = make_shared<Pole_statku>(statek);
+            plansza[poz.first+i][poz.second] = make_shared<Pole_statku>(statek, i);
         }
     }
 }
